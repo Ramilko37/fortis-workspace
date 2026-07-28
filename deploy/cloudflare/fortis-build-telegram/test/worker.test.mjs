@@ -54,6 +54,12 @@ test("deploy endpoint sends build event to the configured Telegram topic", async
         status: "succeeded",
         environment: "dev-vm",
         ref: "abc1234",
+        commitSubject: "feat: add build notifications",
+        branch: "codex/deploy-notifications",
+        frontendRef: "front123",
+        frontendCommitSubject: "feat: frontend polish",
+        backendRef: "back123",
+        backendCommitSubject: "fix: backend readiness",
         url: "http://85.208.87.187/",
       }),
     }),
@@ -77,4 +83,10 @@ test("deploy endpoint sends build event to the configured Telegram topic", async
   assert.equal(form.get("parse_mode"), "HTML");
   assert.match(form.get("text"), /Fortis deploy succeeded/);
   assert.match(form.get("text"), /abc1234/);
+  assert.match(form.get("text"), /feat: add build notifications/);
+  assert.match(form.get("text"), /codex\/deploy-notifications/);
+  assert.match(form.get("text"), /front123/);
+  assert.match(form.get("text"), /feat: frontend polish/);
+  assert.match(form.get("text"), /back123/);
+  assert.match(form.get("text"), /fix: backend readiness/);
 });

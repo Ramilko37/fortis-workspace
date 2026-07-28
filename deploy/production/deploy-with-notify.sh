@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${ENV_FILE:-${SCRIPT_DIR}/.env}"
 APP_URL="${FORTIS_APP_URL:-http://85.208.87.187/}"
 DEPLOY_ENV="${FORTIS_DEPLOY_ENV:-dev-vm}"
+DEPLOY_INFO_FILE="${DEPLOY_INFO_FILE:-${SCRIPT_DIR}/.deploy-info}"
 
 json_escape() {
   local value="$1"
@@ -23,6 +24,15 @@ notification_payload() {
   local payload
 
   payload="{\"status\":\"$(json_escape "${status}")\",\"environment\":\"$(json_escape "${DEPLOY_ENV}")\",\"ref\":\"$(json_escape "${ref}")\",\"url\":\"$(json_escape "${APP_URL}")\""
+  payload="$(append_json_field "${payload}" "commitSubject" "${DEPLOY_COMMIT_SUBJECT:-}")"
+  payload="$(append_json_field "${payload}" "branch" "${DEPLOY_BRANCH:-}")"
+  payload="$(append_json_field "${payload}" "frontendRef" "${DEPLOY_FRONTEND_REF:-}")"
+  payload="$(append_json_field "${payload}" "frontendCommitSubject" "${DEPLOY_FRONTEND_COMMIT_SUBJECT:-}")"
+  payload="$(append_json_field "${payload}" "frontendBranch" "${DEPLOY_FRONTEND_BRANCH:-}")"
+  payload="$(append_json_field "${payload}" "backendRef" "${DEPLOY_BACKEND_REF:-}")"
+  payload="$(append_json_field "${payload}" "backendCommitSubject" "${DEPLOY_BACKEND_COMMIT_SUBJECT:-}")"
+  payload="$(append_json_field "${payload}" "backendBranch" "${DEPLOY_BACKEND_BRANCH:-}")"
+  payload="$(append_json_field "${payload}" "generatedAt" "${DEPLOY_GENERATED_AT:-}")"
   if [[ -n "${exit_code}" ]]; then
     payload+=",\"exitCode\":\"$(json_escape "${exit_code}")\""
   fi
@@ -30,6 +40,18 @@ notification_payload() {
     payload+=",\"line\":\"$(json_escape "${line}")\""
   fi
   payload+="}"
+  printf '%s' "${payload}"
+}
+
+append_json_field() {
+  local payload="$1"
+  local key="$2"
+  local value="$3"
+
+  if [[ -n "${value}" ]]; then
+    payload+=",\"${key}\":\"$(json_escape "${value}")\""
+  fi
+
   printf '%s' "${payload}"
 }
 
@@ -56,7 +78,21 @@ compose() {
 }
 
 build_ref() {
+  if [[ -n "${DEPLOY_REF:-}" ]]; then
+    printf '%s' "${DEPLOY_REF}"
+    return 0
+  fi
+
   git -C "${SCRIPT_DIR}/../.." rev-parse --short HEAD 2>/dev/null || date -u '+%Y%m%dT%H%M%SZ'
+}
+
+load_deploy_info() {
+  if [[ -f "${DEPLOY_INFO_FILE}" ]]; then
+    set -a
+    # shellcheck source=/dev/null
+    source "${DEPLOY_INFO_FILE}"
+    set +a
+  fi
 }
 
 load_env() {
@@ -102,6 +138,7 @@ wait_for_service() {
 
 main() {
   load_env
+  load_deploy_info
 
   local ref started_at
   ref="$(build_ref)"

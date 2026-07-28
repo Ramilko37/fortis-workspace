@@ -45,13 +45,29 @@ export function formatDeployMessage(event) {
   const lines = [
     `<b>${escapeHtml(title)}</b>`,
     fieldLine("Environment", event?.environment),
-    fieldLine("Ref", event?.ref),
+    fieldLine("Branch", event?.branch),
+    fieldLine("Parent", formatCommit(event?.ref, event?.commitSubject)),
+    fieldLine("Frontend", formatCommit(event?.frontendRef, event?.frontendCommitSubject)),
+    fieldLine("Backend", formatCommit(event?.backendRef, event?.backendCommitSubject)),
     fieldLine("URL", event?.url),
     fieldLine("Exit", event?.exitCode),
     fieldLine("Line", event?.line),
+    fieldLine("Generated", event?.generatedAt),
   ].filter(Boolean);
 
   return lines.join("\n");
+}
+
+function formatCommit(ref, subject) {
+  if (!ref && !subject) {
+    return "";
+  }
+
+  if (ref && subject) {
+    return `${ref} - ${subject}`;
+  }
+
+  return ref || subject;
 }
 
 async function sendTelegram(text, env, fetchImpl) {
