@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fortis-build-telegram",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-07-28",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    "TELEGRAM_CHAT_ID": "-1004435908726",
+    "TELEGRAM_THREAD_ID": "370"
+  }
+}

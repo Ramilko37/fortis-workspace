@@ -10,3 +10,6 @@
 
 # Landing review artifacts (local screenshots, not for the repo).
 /landing/previews/
+
+# Server-only deploy secrets.
+/deploy/production/.env
