@@ -95,6 +95,8 @@
 - создавать follow-up задачи по найденным багам, техническому долгу, проверкам, React Doctor/lint findings и незакрытым acceptance criteria;
 - связывать follow-up задачи с исходными задачами через Linear relations, если это поддерживается инструментом.
 
+Пользователь также заранее разрешает запускать React Doctor для Fortis-задач, включая `npx react-doctor@latest --verbose`, `npx react-doctor@latest --verbose --scope changed` и повторные проверки после исправлений.
+
 Это разрешение не распространяется на secrets, production-токены, приватные ключи, пароли и иные чувствительные учётные данные: их нельзя отправлять в Linear или другие внешние системы.
 
 ## Next.js Guard
