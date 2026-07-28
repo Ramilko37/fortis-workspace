@@ -55,7 +55,35 @@ test_send_notification_does_not_fail_deploy_when_webhook_fails() {
   [[ "${#curl_calls[@]}" -eq 1 ]] || fail "expected one curl attempt"
 }
 
+compose_calls=()
+frontend_health_failures=0
+compose() {
+  compose_calls+=("$*")
+  if [[ "$*" == exec\ -T\ frontend* && "${frontend_health_failures}" -gt 0 ]]; then
+    frontend_health_failures=$((frontend_health_failures - 1))
+    return 1
+  fi
+  return 0
+}
+
+sleep() {
+  return 0
+}
+
+test_verify_services_waits_for_frontend_readiness() {
+  compose_calls=()
+  frontend_health_failures=1
+  DEPLOY_HEALTHCHECK_ATTEMPTS=3
+  DEPLOY_HEALTHCHECK_DELAY_SECONDS=0
+
+  verify_services
+
+  [[ "${frontend_health_failures}" -eq 0 ]] || fail "expected frontend retry to consume transient failure"
+  [[ "${#compose_calls[@]}" -eq 4 ]] || fail "expected ps, backend, and two frontend healthcheck calls"
+}
+
 test_send_notification_posts_to_worker_webhook
 test_send_notification_skips_when_webhook_missing
 test_send_notification_does_not_fail_deploy_when_webhook_fails
+test_verify_services_waits_for_frontend_readiness
 printf 'ok - deploy Worker notification contract\n'

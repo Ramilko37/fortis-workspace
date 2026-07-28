@@ -73,8 +73,31 @@ load_env() {
 
 verify_services() {
   compose ps
-  compose exec -T backend wget -qO- http://127.0.0.1:8090/_/readiness >/dev/null
-  compose exec -T frontend wget -qO- http://127.0.0.1:3000/ >/dev/null
+  wait_for_service "backend" compose exec -T backend wget -qO- http://127.0.0.1:8090/_/readiness
+  wait_for_service "frontend" compose exec -T frontend wget -qO- http://127.0.0.1:3000/
+}
+
+wait_for_service() {
+  local service_name="$1"
+  shift
+  local attempts="${DEPLOY_HEALTHCHECK_ATTEMPTS:-30}"
+  local delay_seconds="${DEPLOY_HEALTHCHECK_DELAY_SECONDS:-2}"
+  local attempt=1
+
+  while (( attempt <= attempts )); do
+    if "$@" >/dev/null; then
+      return 0
+    fi
+    if (( attempt == attempts )); then
+      break
+    fi
+    printf 'Waiting for %s healthcheck (%s/%s)...\n' "${service_name}" "${attempt}" "${attempts}" >&2
+    sleep "${delay_seconds}"
+    attempt=$((attempt + 1))
+  done
+
+  printf '%s healthcheck failed after %s attempts.\n' "${service_name}" "${attempts}" >&2
+  return 1
 }
 
 main() {
