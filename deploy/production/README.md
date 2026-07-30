@@ -7,19 +7,22 @@ Target VM for the first dev deployment:
 - OS: Ubuntu 24.04
 - local SSH alias: `fortis-dev-vm`
 
-Make sure the cloud firewall/security group allows inbound TCP `80` from the internet. The VM can serve the app on its private interface, but the public IP will time out while the provider-level rule is closed.
+Make sure the cloud firewall/security group allows inbound TCP `80` and `443`
+from the internet. The VM can serve the app on its private interface, but the
+public IP will time out while the provider-level rule is closed.
 
 ## What runs
 
 - `postgres`: PostgreSQL 17 with persistent Docker volume.
 - `backend`: Go API on internal `:8090`, migrations run on app startup.
-- `frontend`: Next.js on public `${HTTP_PORT:-80}`, proxying API calls to `backend`.
+- `frontend`: Next.js on loopback `${FRONTEND_HOST_PORT:-3000}`, proxying API calls to `backend`.
+- `nginx`: host reverse proxy on public `80` and `443`, forwarding to `127.0.0.1:3000`.
 
 ## First server setup
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y ca-certificates curl git
+sudo apt-get install -y ca-certificates curl git nginx openssl
 sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
@@ -62,6 +65,15 @@ DEPLOY_NOTIFY_WEBHOOK_URL=https://fortis-build-telegram.galyamdin.workers.dev/de
 ```
 
 ```bash
+sudo mkdir -p /etc/nginx/ssl
+sudo openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
+  -keyout /etc/nginx/ssl/fortis-selfsigned.key \
+  -out /etc/nginx/ssl/fortis-selfsigned.crt \
+  -subj "/CN=85.208.87.187" \
+  -addext "subjectAltName=IP:85.208.87.187"
+sudo install -m 0644 nginx.conf /etc/nginx/sites-available/default
+sudo nginx -t
+sudo systemctl enable --now nginx
 ./deploy-with-notify.sh
 docker compose --env-file .env ps
 docker compose --env-file .env exec backend wget -qO- http://127.0.0.1:8090/_/liveness
@@ -76,3 +88,6 @@ Public frontend URL:
 ```text
 http://85.208.87.187/
 ```
+
+HTTPS on the raw IP uses the self-signed certificate above until a real domain
+and certificate are attached.
